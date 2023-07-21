@@ -7,7 +7,6 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { Port_Lligat_Sans } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -30,7 +29,6 @@ const Login = () => {
     console.log(email, password);
     try {
       const user = await signInWithEmailAndPassword(auth, email, password);
-      console.log(user);
     } catch (error) {
       console.log(error);
     }
@@ -40,8 +38,7 @@ const Login = () => {
     console.log(user);
   };
   return isLoading || (!isLoading && authUser) ? (
-    <Loder/>
-
+    <Loder />
   ) : (
     <div className=" flex w-[100vw] h-[100vh]">
       <div className=" bg-slate-200 flex-1 h-full w-full p-5">

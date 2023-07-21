@@ -1,8 +1,6 @@
 "use client";
 import Image from "next/image";
 import { IoAddOutline } from "react-icons/io5";
-
-import Todo from "@/components/todo";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/firebase/auth";
 import {
