@@ -1,113 +1,168 @@
-import Image from 'next/image'
+"use client";
+import Image from "next/image";
+import { IoAddOutline } from "react-icons/io5";
 
+import Todo from "@/components/todo";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/firebase/auth";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  getDoc,
+  doc,
+  getDocs,
+  query,
+  where,
+  updateDoc,
+} from "firebase/firestore";
+import { auth, db } from "@/firebase/firebase";
+import { useRouter } from "next/navigation";
+import { BiCheckbox, BiClipboard, BiCheckSquare } from "react-icons/bi";
+import { MdOutlineDeleteForever } from "react-icons/md";
 export default function Home() {
+  const { authUser, isLoading, signOut } = useAuth();
+  const name = "Mohit";
+  const [inputTodo, setInputTodo] = useState("");
+  const [todos, setTodos] = useState([]);
+  const router = useRouter();
+
+  const addTodo = async () => {
+    try {
+      const docRef = await addDoc(collection(db, "todos"), {
+        owner: authUser.uid,
+        content: inputTodo,
+        completed: false,
+      });
+      fetchTodos(authUser.uid);
+      setInputTodo("");
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const fetchTodos = async (uid) => {
+    try {
+      const q = await query(collection(db, "todos"), where("owner", "==", uid));
+      const querySnapshot = await getDocs(q);
+      let data = [];
+      querySnapshot.forEach((doc) => {
+        console.log(doc.id, "=>", doc.data());
+        data.push({ ...doc.data(), id: doc.id });
+      });
+      setTodos(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const deleteTodo = async (docId) => {
+    try {
+      await deleteDoc(doc(db, "todos", docId));
+      fetchTodos(authUser.id);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  const markAsCompleted = async (check, docId) => {
+    try {
+      const docRef = await doc(db, "todos", docId);
+      await updateDoc(docRef, { completed: !check });
+
+      fetchTodos(authUser.id);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+  useEffect(() => {
+    if (!isLoading && authUser === null) {
+      router.push("/login");
+    }
+    if (!!authUser) {
+      fetchTodos(authUser.uid);
+    }
+  }, [authUser, isLoading]);
+  const onKeyUp = (e) => {
+    if (e.key === "Enter" && inputTodo !== "") {
+      addTodo();
+    }
+  };
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className=" flex w-[100vw] h-[100vh] justify-center flex-row-reverse bg-slate-200">
+      <div className="w-[70vw] md:w-[600px]    flex flex-col items-center ">
+        <div className=" flex w-full   justify-end mt-5 ">
+          <button
+            type="button"
+            onClick={signOut}
+            className="bg-gray-900 w-[100px] h-[35px] rounded-full hover:bg-slate-300 hover:font-semibold hover:text-black"
           >
-            By{' '}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
+            Sign Out
+          </button>
+        </div>
+        <Image
+          src="/todo.jpg"
+          width={90}
+          className="mt-[50px]"
+          height={70}
+          alt="logo"
+        />
+        <h1 className=" text-4xl font-serif text-black font-extrabold mt-5">
+          Tickety-Tasks
+        </h1>
+        <div className="flex w-full px-5 mt-5">
+          <input
+            className="flex-1 border-black focus:border-orange-500 border-2 outline-none rounded-lg px-3 text-black"
+            type="text"
+            value={inputTodo}
+            onChange={(e) => setInputTodo(e.target.value)}
+            placeholder={`👏 ${authUser?.username} add new task in the list of infinitely postponed tasks`}
+            onKeyUp={onKeyUp}
+          />
+          <button
+            className=" w-[50px] h-10 flex justify-center items-center"
+            onClick={addTodo}
+          >
+            <IoAddOutline
+              value={{ color: "black", width: "50px" }}
+              className=" bg-black font-bold rounded-md"
+              size={40}
             />
-          </a>
+          </button>
+        </div>
+        <div className=" mt-8 flex flex-col items-start bg w-full px-5">
+          {todos?.map((todo) => (
+            <div
+              key={todo.id}
+              className="flex w-full items-center justify-between"
+            >
+              
+              <button
+                onClick={() => {
+                  markAsCompleted(todo.completed, todo.id);
+                }}
+              >
+                {!todo.completed ? (
+                  <BiCheckbox size={50} className=" text-black" />
+                ) : (
+                  <BiCheckSquare
+                    size={50}
+                    className=" border-black text-green-400"
+                  />
+                )}
+              </button>
+              <div className="flex-1 break-words">
+                <p className=" text-black font-serif  w-full max-w-[500px] font-medium">
+                  {!todo.completed ? todo.content : <del>{todo.content}</del>}
+                </p>
+              </div>
+              <button
+                className=" w-[100px]"
+                onClick={() => deleteTodo(todo.id)}
+              >
+                <MdOutlineDeleteForever className=" font-bold text-4xl text-red-600" />
+              </button>
+            </div>
+          ))}
         </div>
       </div>
-
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className="mb-32 grid text-center lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Docs{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Find in-depth information about Next.js features and API.
-          </p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800 hover:dark:bg-opacity-30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Learn{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Learn about Next.js in an interactive course with&nbsp;quizzes!
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Templates{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Explore the Next.js 13 playground.
-          </p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Deploy{' '}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
-  )
+    </div>
+  );
 }
